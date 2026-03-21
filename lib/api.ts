@@ -1,3 +1,10 @@
+// Fetch alerts from Snowflake UNIFIED_ALERTS_VIEW
+export async function getSnowflakeAlerts(limit = 20) {
+  const res = await fetch(`${BACKEND}/snowflake/alerts?limit=${limit}`);
+  if (!res.ok) throw new Error("Failed to fetch Snowflake alerts");
+  const data = await res.json();
+  return data.alerts;
+}
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
 
 export type IncidentPayload = {

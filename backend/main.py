@@ -1,15 +1,20 @@
-
-# Load .env before any other imports
+# 1. Load .env FIRST before anything else
 from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
+# Force-load .env from backend folder
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+
+# 2. Standard imports
 import logging
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
 
+# 3. Local imports
 from ai_intelligence.analyzer import analyze_incident
 from mongo_service import (
     test_connection,
@@ -17,21 +22,9 @@ from mongo_service import (
     get_all_incidents,
     get_memory_context,
 )
+from snowflake_service import fetch_unified_alerts
 
-import logging
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
-
-from ai_intelligence.analyzer import analyze_incident
-from mongo_service import (
-    test_connection,
-    store_incident,
-    get_all_incidents,
-    get_memory_context,
-)
-
+# 4. Create app BEFORE any routes
 app = FastAPI(title="SentinelAI Backend")
 
 app.add_middleware(
@@ -42,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# 5. Models
 class IncidentRequest(BaseModel):
     logs: List[Dict[str, Any]]
     anomaly: Dict[str, Any]
@@ -62,7 +55,7 @@ class IncidentBody(BaseModel):
     status: str = "open"
 
 
-# ---------- Health ----------
+# 6. Routes
 
 @app.get("/")
 def root():
@@ -74,17 +67,22 @@ def health_mongo():
     return test_connection()
 
 
-# ---------- Incidents (MongoDB) ----------
+@app.get("/snowflake/alerts")
+def get_snowflake_alerts(limit: int = 20):
+    try:
+        alerts = fetch_unified_alerts(limit=limit)
+        return {"alerts": alerts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/incidents")
 def list_incidents(limit: int = Query(50, ge=1, le=200)):
-    """Return recent incidents from MongoDB, newest first."""
     return get_all_incidents(limit=limit)
 
 
 @app.post("/incidents")
 def create_incident(body: IncidentBody):
-    """Store a new incident in MongoDB and return its ID."""
     doc = body.model_dump()
     inserted_id = store_incident(doc)
     return {"inserted_id": inserted_id}
@@ -97,8 +95,7 @@ def memory_context(
     username: Optional[str] = None,
     severity: Optional[str] = None,
 ):
-    """Return similar past incidents and a memory summary."""
-    event = {}
+    event: Dict[str, Any] = {}
     if attack_type:
         event["attack_type"] = attack_type
     if ip:
@@ -109,8 +106,6 @@ def memory_context(
         event["severity"] = severity
     return get_memory_context(event)
 
-
-# ---------- AI Analysis (with MongoDB memory) ----------
 
 @app.post("/analyze-incident")
 async def analyze_incident_route(payload: IncidentRequest):
@@ -153,6 +148,18 @@ async def analyze_incident_route(payload: IncidentRequest):
                 "recommendations": [
                     "Verify GEMINI_API_KEY in .env",
                     "Restart the backend",
-                ]
-            }
+                ],
+            },
         }
+
+
+@app.get("/debug")
+def debug():
+    import os
+
+    return {
+        "MONGODB_URI": os.getenv("MONGODB_URI"),
+        "MONGODB_DB_NAME": os.getenv("MONGODB_DB_NAME"),
+        "SNOWFLAKE_ACCOUNT": os.getenv("SNOWFLAKE_ACCOUNT"),
+        "SNOWFLAKE_USER": os.getenv("SNOWFLAKE_USER"),
+    }
