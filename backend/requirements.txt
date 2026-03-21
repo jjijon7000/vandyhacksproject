@@ -1,2 +1,6 @@
 fastapi
 uvicorn
+pymongo
+snowflake-connector-python
+google-genai
+python-dotenv

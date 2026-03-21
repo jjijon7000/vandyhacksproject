@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import BorderGlow from "@/components/BorderGlow";
 import CountUp from "@/components/CountUp";
 import Plasma from "@/components/Plasma";
+import IncidentChatbot from "@/components/IncidentChatbot";
 import { analyzeIncident, getIncidents, getSnowflakeAlerts, type MongoIncident } from "@/lib/api";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -170,7 +171,7 @@ function RiskBar({ score }: { score: number }) {
   );
 }
 
-function AlertCard({ alert }: { alert: Alert }) {
+function AlertCard({ alert, onSelect }: { alert: Alert; onSelect?: (alert: Alert) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [actioned, setActioned] = useState(false);
   const [aiResult, setAiResult] = useState<any | null>(null);
@@ -198,25 +199,28 @@ function AlertCard({ alert }: { alert: Alert }) {
             onClick={async () => {
               const willExpand = !expanded;
               setExpanded(willExpand);
-              if (willExpand && !aiResult && !loadingAI) {
-                setLoadingAI(true);
-                setAiError(null);
-                try {
-                  const payload = {
-                    logs: [{ source: alert.source, ip: alert.ip, message: alert.aiExplanation }],
-                    anomaly: {
-                      title: alert.title,
-                      ip: alert.ip,
-                      attack_type: alert.title.toLowerCase().replace(/ /g, "_"),
-                      severity: alert.severity,
-                    },
-                  };
-                  const res = await analyzeIncident(payload as any);
-                  setAiResult(res);
-                } catch (err: any) {
-                  setAiError(err?.message || "Failed to fetch AI analysis");
-                } finally {
-                  setLoadingAI(false);
+              if (willExpand) {
+                onSelect?.(alert);
+                if (!aiResult && !loadingAI) {
+                  setLoadingAI(true);
+                  setAiError(null);
+                  try {
+                    const payload = {
+                      logs: [{ source: alert.source, ip: alert.ip, message: alert.aiExplanation }],
+                      anomaly: {
+                        title: alert.title,
+                        ip: alert.ip,
+                        attack_type: alert.title.toLowerCase().replace(/ /g, "_"),
+                        severity: alert.severity,
+                      },
+                    };
+                    const res = await analyzeIncident(payload as any);
+                    setAiResult(res);
+                  } catch (err: any) {
+                    setAiError(err?.message || "Failed to fetch AI analysis");
+                  } finally {
+                    setLoadingAI(false);
+                  }
                 }
               }
             }}
@@ -345,6 +349,7 @@ export default function Home() {
   const [filter, setFilter] = useState("all");
   const [alerts, setAlerts] = useState<Alert[]>(fallbackAlerts);
   const [dataSource, setDataSource] = useState<"loading" | "mongo" | "snowflake" | "fallback">("loading");
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -540,7 +545,7 @@ export default function Home() {
             {dataSource === "loading" ? (
               <p className="text-sm text-zinc-600 text-center py-8 animate-pulse">Connecting to data sources...</p>
             ) : filtered.length > 0 ? (
-              filtered.map((alert) => <AlertCard key={alert.id} alert={alert} />)
+              filtered.map((alert) => <AlertCard key={alert.id} alert={alert} onSelect={setSelectedAlert} />)
             ) : (
               <p className="text-sm text-zinc-600 text-center py-8">No alerts match this filter.</p>
             )}
@@ -551,6 +556,30 @@ export default function Home() {
           AI analysis by Gemini · Data from Snowflake · Memory via MongoDB · Orchestrated by FastAPI
         </p>
       </main>
+
+      {/* Floating Chatbot Widget */}
+      {selectedAlert && (
+        <IncidentChatbot
+          incidentSummary={{
+            threat: selectedAlert.title,
+            severity: selectedAlert.severity,
+            confidence: selectedAlert.risk / 100,
+            explanation: selectedAlert.aiExplanation,
+          }}
+          anomaly={{
+            type: selectedAlert.title.toLowerCase().replace(/ /g, "_"),
+            source_ip: selectedAlert.ip,
+            severity: selectedAlert.severity,
+          }}
+          historicalContext={[
+            {
+              incident_id: `INC-${selectedAlert.id}`,
+              attack_type: selectedAlert.title,
+              resolution: selectedAlert.recommendation,
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

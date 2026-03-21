@@ -69,3 +69,38 @@ export async function analyzeIncident(payload: IncidentPayload) {
 
   return res.json();
 }
+
+export type IncidentChatPayload = {
+  incident_summary: {
+    threat: string;
+    severity: string;
+    confidence: number;
+    explanation: string;
+  };
+  anomaly: Record<string, any>;
+  historical_context: Array<{
+    incident_id: string;
+    attack_type: string;
+    resolution: string;
+  }>;
+  chat_history: Array<{
+    role: "user" | "assistant";
+    message: string;
+  }>;
+  user_message: string;
+};
+
+export async function sendIncidentChat(payload: IncidentChatPayload) {
+  const res = await fetch(`${BACKEND}/incident-chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Chat request failed ${res.status}: ${txt}`);
+  }
+
+  return res.json();
+}

@@ -16,6 +16,8 @@ from pydantic import BaseModel
 
 # 3. Local imports
 from ai_intelligence.analyzer import analyze_incident
+from ai_intelligence.chat_helper import get_incident_chat_response
+from ai_intelligence.schemas import IncidentChatRequest, IncidentChatResponse
 from mongo_service import (
     test_connection,
     store_incident,
@@ -151,6 +153,29 @@ async def analyze_incident_route(payload: IncidentRequest):
                 ],
             },
         }
+
+
+@app.post("/incident-chat")
+async def incident_chat_route(request: IncidentChatRequest) -> IncidentChatResponse:
+    """
+    Answer follow-up questions about the current incident.
+    Uses Gemini to provide context-aware, beginner-friendly responses.
+    """
+    try:
+        answer = get_incident_chat_response(
+            incident_summary=request.incident_summary,
+            anomaly=request.anomaly,
+            historical_context=request.historical_context,
+            chat_history=request.chat_history,
+            user_message=request.user_message,
+        )
+        return IncidentChatResponse(answer=answer)
+    except Exception as e:
+        logging.exception("incident_chat failed")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat service unavailable: {str(e)[:100]}"
+        )
 
 
 @app.get("/debug")
