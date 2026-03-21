@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import BorderGlow from "@/components/BorderGlow";
 import CountUp from "@/components/CountUp";
-import Plasma from "@/components/Plasma"; // update this path if different
+import Plasma from "@/components/Plasma";
 
 const geist = Geist({ subsets: ["latin"] });
 const geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -103,7 +103,7 @@ function RiskBar({ score }: { score: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="w-24 h-2 bg-zinc-800 rounded-full overflow-hidden">
-        <div className={`h-2 rounded-full ${color}`} style={{ width: `${score}%` }} />
+        <div className={`h-2 rounded-full ${color} transition-all duration-300`} style={{ width: `${score}%` }} />
       </div>
       <span className="text-xs font-semibold text-zinc-400">{score}</span>
     </div>
@@ -116,83 +116,92 @@ function AlertCard({ alert }: { alert: (typeof alerts)[0] }) {
   const cfg = severityConfig[alert.severity];
 
   return (
-    <BorderGlow
-      edgeSensitivity={40}
-      glowColor={cfg.glowColor}
-      backgroundColor="#09090b"
-      borderRadius={16}
-      glowRadius={50}
-      glowIntensity={0.9}
-      coneSpread={30}
-      animated={false}
-      colors={cfg.colors}
-    >
-      <div className="p-5 flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${cfg.badge}`}>
-                {alert.severity}
-              </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge[alert.status]}`}>
-                {alert.status}
-              </span>
-              <span className="text-xs text-zinc-500">{alert.time}</span>
+    <div className="transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.01]">
+      <BorderGlow
+        edgeSensitivity={40}
+        glowColor={cfg.glowColor}
+        backgroundColor="#09090b"
+        borderRadius={16}
+        glowRadius={50}
+        glowIntensity={0.9}
+        coneSpread={30}
+        animated={false}
+        colors={cfg.colors}
+      >
+        <div className="p-5 flex flex-col gap-3">
+
+          {/* Clickable top section only */}
+          <div
+            className="flex flex-col gap-3 cursor-pointer"
+            onClick={() => setExpanded(!expanded)}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full ${cfg.badge}`}>
+                    {alert.severity}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge[alert.status]}`}>
+                    {alert.status}
+                  </span>
+                  <span className="text-xs text-zinc-500">{alert.time}</span>
+                </div>
+                <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">{alert.title}</h3>
+                <p className={`text-xs text-zinc-500 ${geistMono.className}`}>
+                  {alert.source} · {alert.ip}
+                </p>
+              </div>
+              <RiskBar score={alert.risk} />
             </div>
-            <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">{alert.title}</h3>
-            <p className={`text-xs text-zinc-500 ${geistMono.className}`}>
-              {alert.source} · {alert.ip}
-            </p>
+
+            <span className="text-xs text-indigo-400 font-medium self-start">
+              {expanded ? "▲ Hide AI Analysis" : "▼ View AI Analysis"}
+            </span>
           </div>
-          <RiskBar score={alert.risk} />
+
+          {/* Expanded panel — no cursor-pointer, stops propagation */}
+          {expanded && (
+            <div className="bg-zinc-900/70 rounded-xl p-4 flex flex-col gap-3 text-xs text-zinc-300 border border-zinc-800 animate-in fade-in slide-in-from-top-1 duration-200 cursor-default">
+              <div>
+                <span className="font-semibold text-indigo-400 tracking-wide">🤖 Gemini Explanation</span>
+                <p className="mt-1.5 leading-5 text-zinc-400">{alert.aiExplanation}</p>
+              </div>
+              <div className="border-t border-zinc-800 pt-3">
+                <span className="font-semibold text-orange-400 tracking-wide">🔍 Root Cause</span>
+                <p className="mt-1.5 text-zinc-400">{alert.rootCause}</p>
+              </div>
+              <div className="border-t border-zinc-800 pt-3">
+                <span className="font-semibold text-emerald-400 tracking-wide">✅ Recommended Action</span>
+                <p className="mt-1.5 text-zinc-400">{alert.recommendation}</p>
+              </div>
+              <div className="flex gap-2 mt-1 flex-wrap border-t border-zinc-800 pt-3">
+                <button
+                  onClick={() => setActioned(true)}
+                  disabled={actioned}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 ${
+                    actioned
+                      ? "bg-emerald-900/40 text-emerald-400 cursor-default"
+                      : "bg-indigo-600 text-white hover:bg-indigo-500 hover:-translate-y-px hover:shadow-lg hover:shadow-indigo-900/40 cursor-pointer"
+                  }`}
+                >
+                  {actioned ? "✓ Response Executed" : "⚡ Execute Response"}
+                </button>
+                <button className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 hover:-translate-y-px transition-all duration-150 active:scale-95 cursor-pointer">
+                  📋 Assign to Analyst
+                </button>
+                <button className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 hover:-translate-y-px transition-all duration-150 active:scale-95 cursor-pointer">
+                  🔕 Suppress
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs text-indigo-400 font-medium hover:text-indigo-300 transition-colors self-start"
-        >
-          {expanded ? "▲ Hide AI Analysis" : "▼ View AI Analysis"}
-        </button>
-
-        {expanded && (
-          <div className="bg-zinc-900/70 rounded-xl p-4 flex flex-col gap-3 text-xs text-zinc-300 border border-zinc-800">
-            <div>
-              <span className="font-semibold text-indigo-400 tracking-wide">🤖 Gemini Explanation</span>
-              <p className="mt-1.5 leading-5 text-zinc-400">{alert.aiExplanation}</p>
-            </div>
-            <div className="border-t border-zinc-800 pt-3">
-              <span className="font-semibold text-orange-400 tracking-wide">🔍 Root Cause</span>
-              <p className="mt-1.5 text-zinc-400">{alert.rootCause}</p>
-            </div>
-            <div className="border-t border-zinc-800 pt-3">
-              <span className="font-semibold text-emerald-400 tracking-wide">✅ Recommended Action</span>
-              <p className="mt-1.5 text-zinc-400">{alert.recommendation}</p>
-            </div>
-            <div className="flex gap-2 mt-1 flex-wrap border-t border-zinc-800 pt-3">
-              <button
-                onClick={() => setActioned(true)}
-                disabled={actioned}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  actioned
-                    ? "bg-emerald-900/40 text-emerald-400 cursor-default"
-                    : "bg-indigo-600 text-white hover:bg-indigo-500"
-                }`}
-              >
-                {actioned ? "✓ Response Executed" : "⚡ Execute Response"}
-              </button>
-              <button className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-all">
-                📋 Assign to Analyst
-              </button>
-              <button className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-all">
-                🔕 Suppress
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </BorderGlow>
+      </BorderGlow>
+    </div>
   );
 }
+
+
 
 const stats = [
   { label: "Active Threats", to: 3, suffix: "", sub: "2 critical", color: "text-red-400", glowColor: "80 20 20", colors: ["#f87171", "#ef4444"] },
@@ -249,8 +258,8 @@ export default function Home() {
   return (
     <div className={`relative min-h-screen text-zinc-100 ${geist.className}`}>
 
-      {/* Plasma background — fixed full screen */}
-      <div className="fixed inset-0 z-0">
+      {/* Plasma background */}
+      <div className="fixed inset-0 z-0 bg-black">
         <Plasma
           color="#ffffff"
           speed={0.4}
@@ -261,14 +270,13 @@ export default function Home() {
         />
       </div>
 
-      {/* Dark overlay for readability */}
+      {/* Dark overlay */}
       <div className="fixed inset-0 z-[1] bg-zinc-950/50" />
-
 
       {/* Header */}
       <header className="sticky top-0 z-20 bg-zinc-950/60 backdrop-blur-md border-b border-zinc-800/60 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xl">🛡️</span>
+        <div className="flex items-center gap-3 group">
+          <span className="text-xl transition-transform duration-300 group-hover:rotate-12">🛡️</span>
           <div>
             <h1 className="text-sm font-semibold tracking-tight text-zinc-50">Autonomous AI SOC Agent</h1>
             <p className="text-xs text-zinc-500 font-light">Powered by Gemini · Snowflake · MongoDB</p>
@@ -285,34 +293,38 @@ export default function Home() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {stats.map((s) => (
-            <BorderGlow
+            <div
               key={s.label}
-              edgeSensitivity={35}
-              glowColor={s.glowColor}
-              backgroundColor="#09090b"
-              borderRadius={16}
-              glowRadius={45}
-              glowIntensity={0.85}
-              coneSpread={28}
-              animated={false}
-              colors={s.colors}
+              className="transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.03]"
             >
-              <div className="p-5 flex flex-col gap-1">
-                <span className={`text-3xl font-bold tracking-tight ${s.color}`}>
-                  <CountUp
-                    from={0}
-                    to={s.to}
-                    separator=","
-                    direction="up"
-                    duration={1.5}
-                    startCounting={true}
-                  />
-                  {s.suffix}
-                </span>
-                <span className="text-xs font-medium text-zinc-300">{s.label}</span>
-                <span className="text-xs text-zinc-600">{s.sub}</span>
-              </div>
-            </BorderGlow>
+              <BorderGlow
+                edgeSensitivity={35}
+                glowColor={s.glowColor}
+                backgroundColor="#09090b"
+                borderRadius={16}
+                glowRadius={45}
+                glowIntensity={0.85}
+                coneSpread={28}
+                animated={false}
+                colors={s.colors}
+              >
+                <div className="p-5 flex flex-col gap-1">
+                  <span className={`text-3xl font-bold tracking-tight ${s.color}`}>
+                    <CountUp
+                      from={0}
+                      to={s.to}
+                      separator=","
+                      direction="up"
+                      duration={1.5}
+                      startCounting={true}
+                    />
+                    {s.suffix}
+                  </span>
+                  <span className="text-xs font-medium text-zinc-300">{s.label}</span>
+                  <span className="text-xs text-zinc-600">{s.sub}</span>
+                </div>
+              </BorderGlow>
+            </div>
           ))}
         </div>
 
@@ -323,28 +335,32 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {archComponents.map((c) => (
-              <BorderGlow
+              <div
                 key={c.name}
-                edgeSensitivity={40}
-                glowColor={c.glowColor}
-                backgroundColor="#09090b"
-                borderRadius={16}
-                glowRadius={55}
-                glowIntensity={0.8}
-                coneSpread={30}
-                animated={false}
-                colors={c.colors}
+                className="transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.02]"
               >
-                <div className="p-5 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{c.icon}</span>
-                    <span className="font-semibold text-sm text-zinc-100 tracking-tight">{c.name}</span>
-                    <span className="text-xs text-zinc-600 ml-auto font-light">— {c.role}</span>
+                <BorderGlow
+                  edgeSensitivity={40}
+                  glowColor={c.glowColor}
+                  backgroundColor="#09090b"
+                  borderRadius={16}
+                  glowRadius={55}
+                  glowIntensity={0.8}
+                  coneSpread={30}
+                  animated={false}
+                  colors={c.colors}
+                >
+                  <div className="p-5 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base transition-transform duration-300 hover:scale-125">{c.icon}</span>
+                      <span className="font-semibold text-sm text-zinc-100 tracking-tight">{c.name}</span>
+                      <span className="text-xs text-zinc-600 ml-auto font-light">— {c.role}</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-5">{c.desc}</p>
+                    <span className={`text-xs text-zinc-600 mt-0.5 ${geistMono.className}`}>// {c.tag}</span>
                   </div>
-                  <p className="text-xs text-zinc-500 leading-5">{c.desc}</p>
-                  <span className={`text-xs text-zinc-600 mt-0.5 ${geistMono.className}`}>// {c.tag}</span>
-                </div>
-              </BorderGlow>
+                </BorderGlow>
+              </div>
             ))}
           </div>
         </section>
@@ -360,10 +376,10 @@ export default function Home() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`text-xs px-3 py-1 rounded-full font-medium transition-all border ${
+                  className={`text-xs px-3 py-1 rounded-full font-medium transition-all duration-150 border active:scale-95 ${
                     filter === f
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "border-zinc-800 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                      ? "bg-indigo-600 text-white border-indigo-600 scale-105"
+                      : "border-zinc-800 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 hover:-translate-y-px"
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
