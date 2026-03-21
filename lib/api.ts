@@ -5,7 +5,7 @@ export type IncidentPayload = {
 };
 
 export async function analyzeIncident(payload: IncidentPayload) {
-  const base = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
   const res = await fetch(`${base}/analyze-incident`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
