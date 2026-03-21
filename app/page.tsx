@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import BorderGlow from "@/components/BorderGlow";
 import CountUp from "@/components/CountUp";
 import Plasma from "@/components/Plasma";
+import { analyzeIncident } from "@/lib/api";
 
 const geist = Geist({ subsets: ["latin"] });
 const geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -113,6 +114,9 @@ function RiskBar({ score }: { score: number }) {
 function AlertCard({ alert }: { alert: (typeof alerts)[0] }) {
   const [expanded, setExpanded] = useState(false);
   const [actioned, setActioned] = useState(false);
+  const [aiResult, setAiResult] = useState<any | null>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const cfg = severityConfig[alert.severity];
 
   return (
@@ -133,7 +137,29 @@ function AlertCard({ alert }: { alert: (typeof alerts)[0] }) {
           {/* Clickable top section only */}
           <div
             className="flex flex-col gap-3 cursor-pointer"
-            onClick={() => setExpanded(!expanded)}
+            onClick={async () => {
+              const willExpand = !expanded;
+              setExpanded(willExpand);
+              if (willExpand && !aiResult && !loadingAI) {
+                setLoadingAI(true);
+                setAiError(null);
+                try {
+                  const payload = {
+                    logs: [
+                      { source: alert.source, ip: alert.ip, message: alert.aiExplanation },
+                    ],
+                    anomaly: { title: alert.title, ip: alert.ip },
+                    historical_context: [],
+                  };
+                  const res = await analyzeIncident(payload as any);
+                  setAiResult(res);
+                } catch (err: any) {
+                  setAiError(err?.message || "Failed to fetch AI analysis");
+                } finally {
+                  setLoadingAI(false);
+                }
+              }
+            }}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex flex-col gap-1.5">
@@ -164,15 +190,23 @@ function AlertCard({ alert }: { alert: (typeof alerts)[0] }) {
             <div className="bg-zinc-900/70 rounded-xl p-4 flex flex-col gap-3 text-xs text-zinc-300 border border-zinc-800 animate-in fade-in slide-in-from-top-1 duration-200 cursor-default">
               <div>
                 <span className="font-semibold text-indigo-400 tracking-wide">🤖 Gemini Explanation</span>
-                <p className="mt-1.5 leading-5 text-zinc-400">{alert.aiExplanation}</p>
+                {loadingAI ? (
+                  <p className="mt-1.5 leading-5 text-zinc-400">Analyzing…</p>
+                ) : aiError ? (
+                  <p className="mt-1.5 leading-5 text-red-400">{aiError}</p>
+                ) : aiResult ? (
+                  <p className="mt-1.5 leading-5 text-zinc-400">{aiResult.explanation || JSON.stringify(aiResult)}</p>
+                ) : (
+                  <p className="mt-1.5 leading-5 text-zinc-400">{alert.aiExplanation}</p>
+                )}
               </div>
               <div className="border-t border-zinc-800 pt-3">
                 <span className="font-semibold text-orange-400 tracking-wide">🔍 Root Cause</span>
-                <p className="mt-1.5 text-zinc-400">{alert.rootCause}</p>
+                <p className="mt-1.5 text-zinc-400">{aiResult?.root_cause ?? alert.rootCause}</p>
               </div>
               <div className="border-t border-zinc-800 pt-3">
                 <span className="font-semibold text-emerald-400 tracking-wide">✅ Recommended Action</span>
-                <p className="mt-1.5 text-zinc-400">{alert.recommendation}</p>
+                <p className="mt-1.5 text-zinc-400">{(aiResult?.recommended_action || [alert.recommendation]).join ? (aiResult?.recommended_action || [alert.recommendation]).join("; ") : alert.recommendation}</p>
               </div>
               <div className="flex gap-2 mt-1 flex-wrap border-t border-zinc-800 pt-3">
                 <button
