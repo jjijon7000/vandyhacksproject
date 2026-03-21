@@ -155,7 +155,7 @@ function AlertCard({ alert }: { alert: (typeof alerts)[0] }) {
             </div>
 
             <span className="text-xs text-indigo-400 font-medium self-start">
-              {expanded ? "▲ Hide AI Analysis" : "▼ View AI Analysis"}
+              {expanded ? "▲ Hide AI Analysis" : "▼ Click to View AI Analysis"}
             </span>
           </div>
 
