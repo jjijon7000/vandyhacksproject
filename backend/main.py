@@ -1,6 +1,22 @@
+
+# Load .env before any other imports
 from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+
+import logging
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
+
+from ai_intelligence.analyzer import analyze_incident
+from mongo_service import (
+    test_connection,
+    store_incident,
+    get_all_incidents,
+    get_memory_context,
+)
 
 import logging
 from fastapi import FastAPI, HTTPException, Query
