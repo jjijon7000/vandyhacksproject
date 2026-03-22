@@ -346,7 +346,7 @@ export default function Home() {
               <BorderGlow edgeSensitivity={35} glowColor={s.glowColor} backgroundColor="#09090b" borderRadius={14} glowRadius={45} glowIntensity={0.85} coneSpread={28} animated={false} colors={s.colors}>
                 <div className="p-5 flex flex-col gap-1">
                   <span className={`text-3xl font-bold tracking-tight ${s.color}`}>
-                    <CountUp key={`${s.label}-${s.to}`} from={0} to={s.to} separator="," direction="up" duration={1.5} startCounting={true} />
+                    <CountUp key={`${s.label}-${s.to}`} from={0} to={s.to} separator="," direction="up" duration={1.5} />
                     {s.suffix}
                   </span>
                   <span className="text-xs font-medium text-zinc-300">{s.label}</span>
