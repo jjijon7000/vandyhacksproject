@@ -122,6 +122,10 @@ async def analyze_incident_route(payload: IncidentRequest):
             historical_context=historical,
         )
 
+        # Attach occurrence tracking from MongoDB
+        result["occurrence_count"] = context.get("occurrence_count", 0)
+        result["memory_summary"] = context.get("memory_summary", "")
+
         # Store the incident + AI result into MongoDB
         store_doc = {
             **payload.anomaly,
