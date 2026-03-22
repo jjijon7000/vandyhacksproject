@@ -1,0 +1,12 @@
+[project]
+name = "sentinelai-backend"
+version = "0.1.0"
+description = "SentinelAI FastAPI backend for Vercel deployment"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+app = "backend.main:app"
+
+[tool.vercel.scripts]
+build = "echo 'No build step required'"

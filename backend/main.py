@@ -31,7 +31,11 @@ app = FastAPI(title="SentinelAI Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://vandyhacksproject-msql.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,7 +116,6 @@ def memory_context(
 @app.post("/analyze-incident")
 async def analyze_incident_route(payload: IncidentRequest):
     try:
-        # Pull memory context from MongoDB for the anomaly
         context = get_memory_context(payload.anomaly)
         historical = context.get("similar_incidents", [])
 
@@ -122,11 +125,9 @@ async def analyze_incident_route(payload: IncidentRequest):
             historical_context=historical,
         )
 
-        # Attach occurrence tracking from MongoDB
         result["occurrence_count"] = context.get("occurrence_count", 0)
         result["memory_summary"] = context.get("memory_summary", "")
 
-        # Store the incident + AI result into MongoDB
         store_doc = {
             **payload.anomaly,
             "source": payload.logs[0].get("source", "") if payload.logs else "",
@@ -161,10 +162,6 @@ async def analyze_incident_route(payload: IncidentRequest):
 
 @app.post("/incident-chat")
 async def incident_chat_route(request: IncidentChatRequest) -> IncidentChatResponse:
-    """
-    Answer follow-up questions about the current incident.
-    Uses Gemini to provide context-aware, beginner-friendly responses.
-    """
     try:
         answer = get_incident_chat_response(
             incident_summary=request.incident_summary,
@@ -185,7 +182,6 @@ async def incident_chat_route(request: IncidentChatRequest) -> IncidentChatRespo
 @app.get("/debug")
 def debug():
     import os
-
     return {
         "MONGODB_URI": os.getenv("MONGODB_URI"),
         "MONGODB_DB_NAME": os.getenv("MONGODB_DB_NAME"),
