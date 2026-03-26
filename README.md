@@ -68,7 +68,7 @@ An autonomous Security Operations Center (SOC) platform powered by Gemini AI, Sn
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/jjijon7000/vandyhacksproject
+git clone https://github.com/jjijon7000/vandyhacksproject.git
 cd sentinelai
 ```
 
